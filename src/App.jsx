@@ -7,17 +7,22 @@ export default function RackCalculator() {
   const [ruPerRack, setRuPerRack] = useState(0);
   const [showDistribution, setShowDistribution] = useState(false);
 
-  // Basic calculations
-  const maxServersPerRack = serverRU > 0 ? Math.floor(ruPerRack / serverRU) : 0;
-  const baseServersPerRack = (rackTotal > 0 && maxServersPerRack > 0)
+  // Input validation check
+  const validInputs = serverRU > 0 && ruPerRack > 0 && rackTotal > 0;
+
+  // Main calculations
+  const maxServersPerRack = validInputs ? Math.floor(ruPerRack / serverRU) : 0;
+  const baseServersPerRack = validInputs
     ? Math.min(Math.floor(totalServers / rackTotal), maxServersPerRack)
     : 0;
   const extraDistribution = rackTotal > 0 ? totalServers % rackTotal : 0;
   const ruAvailableTotal = ruPerRack * rackTotal;
   const totalRUNeeded = totalServers * serverRU;
-  const ruUtilization = ruAvailableTotal > 0 ? ((totalRUNeeded / ruAvailableTotal) * 100).toFixed(1) : 0;
+  const ruUtilization = ruAvailableTotal > 0
+    ? ((totalRUNeeded / ruAvailableTotal) * 100).toFixed(1)
+    : 0;
 
-  // Distribution array
+  // Server distribution array
   const distribution = Array.from({ length: rackTotal }, (_, i) =>
     i < extraDistribution ? baseServersPerRack + 1 : baseServersPerRack
   );
@@ -27,23 +32,25 @@ export default function RackCalculator() {
     return acc;
   }, {});
 
-  // Even distribution calculation
-  const totalRUCapacity = rackTotal * ruPerRack;
-  const maxPhysicalServers = Math.floor(totalRUCapacity / serverRU);
+  // Even distribution suggestion
+  let serversForEvenDistribution = null;
+  let additionalServersNeeded = null;
 
-  let serversForEvenDistribution = totalServers;
-  while (serversForEvenDistribution % rackTotal !== 0) {
-    serversForEvenDistribution++;
+  if (validInputs) {
+    const totalRUCapacity = rackTotal * ruPerRack;
+    const maxPhysicalServers = Math.floor(totalRUCapacity / serverRU);
+
+    serversForEvenDistribution = totalServers;
+    while (serversForEvenDistribution % rackTotal !== 0) {
+      serversForEvenDistribution++;
+    }
+
+    if (serversForEvenDistribution > maxPhysicalServers) {
+      serversForEvenDistribution = null;
+    } else {
+      additionalServersNeeded = serversForEvenDistribution - totalServers;
+    }
   }
-
-  if (serversForEvenDistribution > maxPhysicalServers) {
-    serversForEvenDistribution = null; // cannot fit evenly with RU limits
-  }
-
-  const additionalServersNeeded =
-    serversForEvenDistribution !== null
-      ? serversForEvenDistribution - totalServers
-      : null;
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-900 text-white p-4 sm:p-8">
@@ -57,7 +64,7 @@ export default function RackCalculator() {
               type="number"
               className="border border-gray-600 bg-gray-700 text-white p-2 w-full rounded-lg"
               value={totalServers}
-              onChange={(e) => setTotalServers(parseInt(e.target.value, 10))}
+              onChange={(e) => setTotalServers(parseInt(e.target.value, 10) || 0)}
             />
           </label>
 
@@ -67,7 +74,7 @@ export default function RackCalculator() {
               type="number"
               className="border border-gray-600 bg-gray-700 text-white p-2 w-full rounded-lg"
               value={serverRU}
-              onChange={(e) => setServerRU(parseFloat(e.target.value))}
+              onChange={(e) => setServerRU(parseFloat(e.target.value) || 0)}
             />
           </label>
 
@@ -77,7 +84,7 @@ export default function RackCalculator() {
               type="number"
               className="border border-gray-600 bg-gray-700 text-white p-2 w-full rounded-lg"
               value={rackTotal}
-              onChange={(e) => setRackTotal(parseInt(e.target.value, 10))}
+              onChange={(e) => setRackTotal(parseInt(e.target.value, 10) || 0)}
             />
           </label>
 
@@ -87,7 +94,7 @@ export default function RackCalculator() {
               type="number"
               className="border border-gray-600 bg-gray-700 text-white p-2 w-full rounded-lg"
               value={ruPerRack}
-              onChange={(e) => setRuPerRack(parseFloat(e.target.value))}
+              onChange={(e) => setRuPerRack(parseFloat(e.target.value) || 0)}
             />
           </label>
         </div>
