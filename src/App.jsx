@@ -7,7 +7,7 @@ export default function RackCalculator() {
   const [ruPerRack, setRuPerRack] = useState(0);
   const [showDistribution, setShowDistribution] = useState(false);
 
-  // Calculations
+  // Basic calculations
   const maxServersPerRack = serverRU > 0 ? Math.floor(ruPerRack / serverRU) : 0;
   const baseServersPerRack = (rackTotal > 0 && maxServersPerRack > 0)
     ? Math.min(Math.floor(totalServers / rackTotal), maxServersPerRack)
@@ -17,7 +17,7 @@ export default function RackCalculator() {
   const totalRUNeeded = totalServers * serverRU;
   const ruUtilization = ruAvailableTotal > 0 ? ((totalRUNeeded / ruAvailableTotal) * 100).toFixed(1) : 0;
 
-  // Distribute servers across racks as evenly as possible
+  // Distribution array
   const distribution = Array.from({ length: rackTotal }, (_, i) =>
     i < extraDistribution ? baseServersPerRack + 1 : baseServersPerRack
   );
@@ -28,10 +28,22 @@ export default function RackCalculator() {
   }, {});
 
   // Even distribution calculation
-  const serversForEvenDistribution = rackTotal > 0
-    ? baseServersPerRack * rackTotal + (extraDistribution > 0 ? rackTotal - extraDistribution : 0)
-    : 0;
-  const additionalServersNeeded = serversForEvenDistribution - totalServers;
+  const totalRUCapacity = rackTotal * ruPerRack;
+  const maxPhysicalServers = Math.floor(totalRUCapacity / serverRU);
+
+  let serversForEvenDistribution = totalServers;
+  while (serversForEvenDistribution % rackTotal !== 0) {
+    serversForEvenDistribution++;
+  }
+
+  if (serversForEvenDistribution > maxPhysicalServers) {
+    serversForEvenDistribution = null; // cannot fit evenly with RU limits
+  }
+
+  const additionalServersNeeded =
+    serversForEvenDistribution !== null
+      ? serversForEvenDistribution - totalServers
+      : null;
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-900 text-white p-4 sm:p-8">
@@ -102,13 +114,19 @@ export default function RackCalculator() {
           </ul>
 
           <h3 className="text-lg font-semibold mt-4">Even Distribution Suggestion:</h3>
-          <p>
-            To evenly distribute servers across all racks: <strong>{serversForEvenDistribution}</strong> servers total (
-            {additionalServersNeeded > 0
-              ? `add ${additionalServersNeeded} more`
-              : "already even"}
-            ).
-          </p>
+          {serversForEvenDistribution !== null ? (
+            <p>
+              To evenly distribute servers across all racks: <strong>{serversForEvenDistribution}</strong> servers total (
+              {additionalServersNeeded > 0
+                ? `add ${additionalServersNeeded} more`
+                : "already even"}
+              ).
+            </p>
+          ) : (
+            <p className="text-red-400">
+              ⚠️ Cannot evenly distribute more servers without exceeding rack RU limits.
+            </p>
+          )}
 
           <div className="mt-4 flex gap-2">
             <button
