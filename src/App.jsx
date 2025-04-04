@@ -1,29 +1,40 @@
 import React, { useState } from 'react';
 
 export default function RackCalculator() {
-  const [totalServers, setTotalServers] = useState(0);
-  const [serverRU, setServerRU] = useState(0);
-  const [rackTotal, setRackTotal] = useState(0);
-  const [ruPerRack, setRuPerRack] = useState(0);
+  // Allow inputs to be empty strings for better UX
+  const [totalServers, setTotalServers] = useState('');
+  const [serverRU, setServerRU] = useState('');
+  const [rackTotal, setRackTotal] = useState('');
+  const [ruPerRack, setRuPerRack] = useState('');
   const [showDistribution, setShowDistribution] = useState(false);
 
-  // Input validation check
-  const validInputs = serverRU > 0 && ruPerRack > 0 && rackTotal > 0;
+  // Parse numeric values for calculations
+  const parsedTotalServers = parseInt(totalServers, 10) || 0;
+  const parsedServerRU = parseFloat(serverRU) || 0;
+  const parsedRackTotal = parseInt(rackTotal, 10) || 0;
+  const parsedRuPerRack = parseFloat(ruPerRack) || 0;
+
+  const validInputs = parsedServerRU > 0 && parsedRuPerRack > 0 && parsedRackTotal > 0;
 
   // Main calculations
-  const maxServersPerRack = validInputs ? Math.floor(ruPerRack / serverRU) : 0;
-  const baseServersPerRack = validInputs
-    ? Math.min(Math.floor(totalServers / rackTotal), maxServersPerRack)
+  const maxServersPerRack = validInputs
+    ? Math.floor(parsedRuPerRack / parsedServerRU)
     : 0;
-  const extraDistribution = rackTotal > 0 ? totalServers % rackTotal : 0;
-  const ruAvailableTotal = ruPerRack * rackTotal;
-  const totalRUNeeded = totalServers * serverRU;
+
+  const baseServersPerRack = validInputs
+    ? Math.min(Math.floor(parsedTotalServers / parsedRackTotal), maxServersPerRack)
+    : 0;
+
+  const extraDistribution = parsedRackTotal > 0 ? parsedTotalServers % parsedRackTotal : 0;
+  const ruAvailableTotal = parsedRuPerRack * parsedRackTotal;
+  const totalRUNeeded = parsedTotalServers * parsedServerRU;
+
   const ruUtilization = ruAvailableTotal > 0
     ? ((totalRUNeeded / ruAvailableTotal) * 100).toFixed(1)
     : 0;
 
   // Server distribution array
-  const distribution = Array.from({ length: rackTotal }, (_, i) =>
+  const distribution = Array.from({ length: parsedRackTotal }, (_, i) =>
     i < extraDistribution ? baseServersPerRack + 1 : baseServersPerRack
   );
 
@@ -37,18 +48,18 @@ export default function RackCalculator() {
   let additionalServersNeeded = null;
 
   if (validInputs) {
-    const totalRUCapacity = rackTotal * ruPerRack;
-    const maxPhysicalServers = Math.floor(totalRUCapacity / serverRU);
+    const totalRUCapacity = parsedRackTotal * parsedRuPerRack;
+    const maxPhysicalServers = Math.floor(totalRUCapacity / parsedServerRU);
 
-    serversForEvenDistribution = totalServers;
-    while (serversForEvenDistribution % rackTotal !== 0) {
+    serversForEvenDistribution = parsedTotalServers;
+    while (serversForEvenDistribution % parsedRackTotal !== 0) {
       serversForEvenDistribution++;
     }
 
     if (serversForEvenDistribution > maxPhysicalServers) {
       serversForEvenDistribution = null;
     } else {
-      additionalServersNeeded = serversForEvenDistribution - totalServers;
+      additionalServersNeeded = serversForEvenDistribution - parsedTotalServers;
     }
   }
 
@@ -64,7 +75,7 @@ export default function RackCalculator() {
               type="number"
               className="border border-gray-600 bg-gray-700 text-white p-2 w-full rounded-lg"
               value={totalServers}
-              onChange={(e) => setTotalServers(parseInt(e.target.value, 10) || 0)}
+              onChange={(e) => setTotalServers(e.target.value)}
             />
           </label>
 
@@ -74,7 +85,7 @@ export default function RackCalculator() {
               type="number"
               className="border border-gray-600 bg-gray-700 text-white p-2 w-full rounded-lg"
               value={serverRU}
-              onChange={(e) => setServerRU(parseFloat(e.target.value) || 0)}
+              onChange={(e) => setServerRU(e.target.value)}
             />
           </label>
 
@@ -84,7 +95,7 @@ export default function RackCalculator() {
               type="number"
               className="border border-gray-600 bg-gray-700 text-white p-2 w-full rounded-lg"
               value={rackTotal}
-              onChange={(e) => setRackTotal(parseInt(e.target.value, 10) || 0)}
+              onChange={(e) => setRackTotal(e.target.value)}
             />
           </label>
 
@@ -94,7 +105,7 @@ export default function RackCalculator() {
               type="number"
               className="border border-gray-600 bg-gray-700 text-white p-2 w-full rounded-lg"
               value={ruPerRack}
-              onChange={(e) => setRuPerRack(parseFloat(e.target.value) || 0)}
+              onChange={(e) => setRuPerRack(e.target.value)}
             />
           </label>
         </div>
@@ -109,7 +120,7 @@ export default function RackCalculator() {
 
           {totalRUNeeded > ruAvailableTotal && (
             <p className="text-red-400 mt-2">
-              ⚠️ Not enough RU available: You need <strong>{totalRUNeeded}</strong> RU but only have <strong>{ruAvailableTotal}</strong> RU across {rackTotal} racks.
+              ⚠️ Not enough RU available: You need <strong>{totalRUNeeded}</strong> RU but only have <strong>{ruAvailableTotal}</strong> RU across {parsedRackTotal} racks.
             </p>
           )}
 
@@ -145,10 +156,10 @@ export default function RackCalculator() {
 
             <button
               onClick={() => {
-                setTotalServers(0);
-                setServerRU(0);
-                setRackTotal(0);
-                setRuPerRack(0);
+                setTotalServers('');
+                setServerRU('');
+                setRackTotal('');
+                setRuPerRack('');
                 setShowDistribution(false);
               }}
               className="bg-red-600 hover:bg-red-500 text-white px-4 py-2 rounded-lg"
